@@ -1,127 +1,112 @@
 import React from 'react';
-import './App.css'; // import the css file to enable your styles.
+import './App.css';
 import { GameState, Cell } from './game';
 import BoardCell from './Cell';
 
-/**
- * Define the type of the props field for a React component
- */
-interface Props { }
+interface Props {}
 
-/**
- * Using generics to specify the type of props and state.
- * props and state is a special field in a React component.
- * React will keep track of the value of props and state.
- * Any time there's a change to their values, React will
- * automatically update (not fully re-render) the HTML needed.
- * 
- * props and state are similar in the sense that they manage
- * the data of this component. A change to their values will
- * cause the view (HTML) to change accordingly.
- * 
- * Usually, props is passed and changed by the parent component;
- * state is the internal value of the component and managed by
- * the component itself.
- */
 class App extends React.Component<Props, GameState> {
-  private initialized: boolean = false;
+  private initialized = false;
 
-  /**
-   * @param props has type Props
-   */
   constructor(props: Props) {
-    super(props)
-    /**
-     * state has type GameState as specified in the class inheritance.
-     */
-    this.state = { cells: [] }
+    super(props);
+    this.state = {
+      cells: [],
+      winner: '',
+      currentPlayer: '',
+      history: []
+    };
   }
 
-  /**
-   * Use arrow function, i.e., () => {} to create an async function,
-   * otherwise, 'this' would become undefined in runtime. This is
-   * just an issue of Javascript.
-   */
+  // Start a new game
   newGame = async () => {
     const response = await fetch('/newgame');
     const json = await response.json();
-    this.setState({ cells: json['cells'] });
+    this.setState({
+      cells: json['cells'],
+      winner: '',
+      currentPlayer: 'X',
+      history: []
+    });
   }
 
-  /**
-   * play will generate an anonymous function that the component
-   * can bind with.
-   * @param x 
-   * @param y 
-   * @returns 
-   */
-  play(x: number, y: number): React.MouseEventHandler {
+  // Play a move
+  play = (x: number, y: number): React.MouseEventHandler => {
     return async (e) => {
-      // prevent the default behavior on clicking a link; otherwise, it will jump to a new page.
       e.preventDefault();
-      const response = await fetch(`/play?x=${x}&y=${y}`)
+
+      if (this.state.winner) return; // if game is over, prevent more moves
+
+      const response = await fetch(`/play?x=${x}&y=${y}`);
       const json = await response.json();
-      this.setState({ cells: json['cells'] });
-    }
+      this.setState({
+        cells: json['cells'],
+        winner: json['winner'],
+        currentPlayer: json['currentPlayer'],
+        history: [...this.state.history, this.state.cells]
+      });
+    };
   }
 
+  // Undo last move
+  undo = () => {
+    const lastHistory = [...this.state.history];
+    if (lastHistory.length === 0) return;
+
+    const previousCells = lastHistory.pop()!;
+    this.setState({
+      cells: previousCells,
+      winner: '',
+      currentPlayer: this.state.currentPlayer === 'X' ? 'O' : 'X',
+      history: lastHistory
+    });
+  }
+
+  // Render a single cell
   createCell(cell: Cell, index: number): React.ReactNode {
-    if (cell.playable)
-      /**
-       * key is used for React when given a list of items. It
-       * helps React to keep track of the list items and decide
-       * which list item need to be updated.
-       * @see https://reactjs.org/docs/lists-and-keys.html#keys
-       */
-      return (
-        <div key={index}>
-          <a href='/' onClick={this.play(cell.x, cell.y)}>
-            <BoardCell cell={cell}></BoardCell>
-          </a>
-        </div>
-      )
-    else
-      return (
-        <div key={index}><BoardCell cell={cell}></BoardCell></div>
-      )
+    return (
+      <div key={index}>
+        <a href='/' onClick={cell.playable ? this.play(cell.x, cell.y) : undefined}>
+          <BoardCell cell={cell}></BoardCell>
+        </a>
+      </div>
+    );
   }
 
-  /**
-   * This function will call after the HTML is rendered.
-   * We update the initial state by creating a new game.
-   * @see https://reactjs.org/docs/react-component.html#componentdidmount
-   */
   componentDidMount(): void {
-    /**
-     * setState in DidMount() will cause it to render twice which may cause
-     * this function to be invoked twice. Use initialized to avoid that.
-     */
     if (!this.initialized) {
       this.newGame();
       this.initialized = true;
     }
   }
 
-  /**
-   * The only method you must define in a React.Component subclass.
-   * @returns the React element via JSX.
-   * @see https://reactjs.org/docs/react-component.html
-   */
   render(): React.ReactNode {
-    /**
-     * We use JSX to define the template. An advantage of JSX is that you
-     * can treat HTML elements as code.
-     * @see https://reactjs.org/docs/introducing-jsx.html
-     */
     return (
-      <div>
-        <div id="board">
-          {this.state.cells.map((cell, i) => this.createCell(cell, i))}
+      <div className="App">
+        <h1>Tic Tac Toe</h1>
+
+        {/* Instructions */}
+        <div id="instructions">
+          {this.state.winner
+            ? `🏆 Winner: ${this.state.winner}`
+            : this.state.currentPlayer
+              ? `🎮 Current Player: ${this.state.currentPlayer}`
+              : 'Loading...'}
         </div>
+
+        {/* Game Board */}
+        <div id="board">
+          {this.state.cells.length === 0 ? (
+            <div>Loading...</div>
+          ) : (
+            this.state.cells.map((cell, i) => this.createCell(cell, i))
+          )}
+        </div>
+
+        {/* Buttons */}
         <div id="bottombar">
-          <button onClick={/* get the function, not call the function */this.newGame}>New Game</button>
-          {/* Exercise: implement Undo function */}
-          <button>Undo</button>
+          <button onClick={this.newGame}>New Game</button>
+          <button onClick={this.undo} disabled={this.state.history.length === 0}>Undo</button>
         </div>
       </div>
     );
