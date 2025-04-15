@@ -1,15 +1,13 @@
-interface Cell {
-  text: string;       // "X", "O", эсвэл ""
-  playable: boolean;  // true бол тоглогч дарах боломжтой
-  x: number;          // мөрийн индекс
-  y: number;          // баганын индекс
-}
-
 interface GameState {
-  cells: Cell[];         // самбарын нүднүүд
-  winner?: string;       // "X", "O", эсвэл undefined
-  currentPlayer?: string;// "X" эсвэл "O"
-  history?: Cell[][];    // өмнөх төлвүүд (undo-д ашиглагдана)
+  cells: Cell[];
+  instructions: string;
 }
 
-export type { GameState, Cell };
+interface Cell {
+  text: string;
+  playable: boolean;
+  x: number;
+  y: number;
+}
+
+export type { GameState, Cell }
