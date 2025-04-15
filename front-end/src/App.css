@@ -30,9 +30,9 @@
   transform: scale(1.03);
 }
 
-/* Highlight playable cells */
+/* Highlight playable cells */  
 .playable {
-  background-color: #f44336;
+  background-color: #d5e0d3;
   color: white;
   font-weight: bold;
   cursor: pointer;
